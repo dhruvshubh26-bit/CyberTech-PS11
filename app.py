@@ -245,13 +245,7 @@ if select_one == "🏡Home":
     st.subheader("Empowering Communities to Combat Child Sexual Offenses")
     st.divider()
     st.write("This platform allows you to report incidents related to child sexual offenses in a secure and anonymous manner using blockchain technology. You can also track your reports, analyze data, and access resources for support.")
-    # st.subheader("""
-    # **Features:**
-    # - Report incidents anonymously
-    # - Track the status of your reports
-    # - Analyze trends and patterns in reported cases
-    # - Access resources and support services
-    # """)
+
     st.subheader("""    **🗝️Key Features:**""")
     st.dataframe({
         "Feature": ["Anonymous Reporting", "Report Tracking", "Data Analytics", "Blockchain Security", "Resource Access", "Community Support"],
@@ -270,10 +264,10 @@ if select_one == "🏡Home":
 
         st.write("""
 
-    1. Navigate to the "Report Incident" section to submit a new report.
-    2. Use the "Track Report" section to check the status of your submitted reports.
-    3. Explore the "Analytics" section to view trends and insights from the reported data.
-    4. Access the "Authority Dashboard" for law enforcement and authorities to manage reports and cases.
+    1. Navigate to the **"Report Incident"** section to submit a new report.
+    2. Use the **"Track Report"** section to check the status of your submitted reports.
+    3. Explore the **"Analytics"** section to view trends and insights from the reported data.
+    4. Access the **"Authority Dashboard"** for law enforcement and authorities to manage reports and cases.
     """)
 
 
@@ -325,7 +319,7 @@ if select_one == "📝Report Incident":
             platform = st.text_input("Please specify the messaging app", placeholder="Enter the name of the messaging app where the incident occurred.", help="If the messaging app is not listed, please specify it here.",label_visibility="collapsed")
 
     st.subheader("Upload Evidence ")
-    file=st.file_uploader(label="", type=["txt","log","jpg","csv", "jpeg","pdf"], help="Upload any evidence related to the incident, such as screenshots, videos, or documents. Accepted formats include JPG, JPEG, PNG, PDF, MP4, and AVI.",label_visibility="collapsed")
+    file=st.file_uploader(label="", type=["txt","log","jpg","csv", "jpeg","pdf", "mp4"], help="Upload any evidence related to the incident, such as screenshots, videos, or documents. Accepted formats include JPG, JPEG, PNG, PDF, MP4, and AVI.",label_visibility="collapsed")
     
     check=st.checkbox("I confirm this report is genuine", key="checkbox_input")
     if url_ == "":
