@@ -632,7 +632,7 @@ if select_one == "🔗Blockchain Explorer":
         st.write("4. Status changes are also transactions and create new blocks.")
         st.write("5. Data is persisted in a local JSON backend for continuity across app restarts.")
 
-# AI Analyzer with API Key
+# AI Analyzer with API Key *******************************
 
 # if select_one == "🛡️AI Analyzer":
 # com.iframe("https://embed.lottiefiles.com/animation/9060", height=100, scrolling=True)
