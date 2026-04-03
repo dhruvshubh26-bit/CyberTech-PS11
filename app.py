@@ -54,6 +54,189 @@ if "checkbox_input" not in st.session_state:
 
 if "tracking_id_input" not in st.session_state:
     st.session_state.tracking_id_input = ""
+
+if "fernet_key" not in st.session_state:
+    st.session_state.fernet_key = Fernet.generate_key()
+
+BACKEND_FILE = os.path.join(os.path.dirname(__file__), "blockchain_backend.json")
+
+
+def _now_str():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def build_block_hash(index, timestamp, payload, previous_hash):
+    body = {
+        "index": index,
+        "timestamp": timestamp,
+        "payload": payload,
+        "previous_hash": previous_hash
+    }
+    return hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
+
+
+def create_genesis_chain():
+    payload = {
+        "event": "GENESIS",
+        "note": "First block to start the chain",
+        "timestamp": _now_str()
+    }
+    genesis = {
+        "index": 0,
+        "timestamp": payload["timestamp"],
+        "payload": payload,
+        "previous_hash": "0"
+    }
+    genesis["hash"] = build_block_hash(
+        genesis["index"],
+        genesis["timestamp"],
+        genesis["payload"],
+        genesis["previous_hash"]
+    )
+    return [genesis]
+
+
+def verify_chain_integrity(chain):
+    if not isinstance(chain, list) or not chain:
+        return False, "Chain is empty"
+
+    if chain[0].get("previous_hash") != "0":
+        return False, "Genesis previous_hash is invalid"
+
+    for i, block in enumerate(chain):
+        expected_hash = build_block_hash(
+            block.get("index"),
+            block.get("timestamp"),
+            block.get("payload"),
+            block.get("previous_hash")
+        )
+        if block.get("hash") != expected_hash:
+            return False, f"Block hash mismatch at index {i}"
+
+        if i > 0 and block.get("previous_hash") != chain[i - 1].get("hash"):
+            return False, f"Broken block link at index {i}"
+
+    return True, "Chain is valid"
+
+
+def save_blockchain_backend():
+    data = {
+        "report_chain": st.session_state.report_chain,
+        "report_ledger": st.session_state.report_ledger,
+        "saved_at": _now_str()
+    }
+    with open(BACKEND_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
+def load_blockchain_backend():
+    if not os.path.exists(BACKEND_FILE):
+        return create_genesis_chain(), []
+
+    try:
+        with open(BACKEND_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        chain = data.get("report_chain", [])
+        ledger = data.get("report_ledger", [])
+
+        if not isinstance(chain, list) or not isinstance(ledger, list):
+            return create_genesis_chain(), []
+
+        is_valid, _ = verify_chain_integrity(chain)
+        if not is_valid:
+            return create_genesis_chain(), []
+
+        return chain, ledger
+    except Exception:
+        return create_genesis_chain(), []
+
+
+def append_report_block(tracking_id, incident_type, risk, platform, url_value, description_value):
+    previous_block = st.session_state.report_chain[-1]
+    timestamp = _now_str()
+    payload = {
+        "event": "REPORT_SUBMITTED",
+        "tracking_id": tracking_id,
+        "incident_type": incident_type,
+        "risk": risk,
+        "platform": platform,
+        "url_hash": hashlib.sha256(url_value.encode()).hexdigest(),
+        "description_hash": hashlib.sha256(description_value.encode()).hexdigest(),
+        "status": "Submitted",
+        "timestamp": timestamp
+    }
+
+    new_block = {
+        "index": len(st.session_state.report_chain),
+        "timestamp": timestamp,
+        "payload": payload,
+        "previous_hash": previous_block["hash"]
+    }
+    new_block["hash"] = build_block_hash(
+        new_block["index"],
+        new_block["timestamp"],
+        new_block["payload"],
+        new_block["previous_hash"]
+    )
+    st.session_state.report_chain.append(new_block)
+
+    st.session_state.report_ledger.append({
+        "block_index": new_block["index"],
+        "tracking_id": tracking_id,
+        "incident_type": incident_type,
+        "severity": risk,
+        "status": "Submitted",
+        "platform": platform,
+        "timestamp": timestamp,
+        "updated_at": timestamp
+    })
+    save_blockchain_backend()
+    return new_block
+
+
+def append_status_update_block(tracking_id, new_status, actor="Authority"):
+    target_row = None
+    for row in reversed(st.session_state.report_ledger):
+        if row.get("tracking_id") == tracking_id:
+            target_row = row
+            break
+
+    if not target_row:
+        return False
+
+    target_row["status"] = new_status
+    target_row["updated_at"] = _now_str()
+
+    previous_block = st.session_state.report_chain[-1]
+    payload = {
+        "event": "STATUS_UPDATED",
+        "tracking_id": tracking_id,
+        "status": new_status,
+        "actor": actor,
+        "timestamp": _now_str()
+    }
+    block = {
+        "index": len(st.session_state.report_chain),
+        "timestamp": payload["timestamp"],
+        "payload": payload,
+        "previous_hash": previous_block["hash"]
+    }
+    block["hash"] = build_block_hash(
+        block["index"],
+        block["timestamp"],
+        block["payload"],
+        block["previous_hash"]
+    )
+    st.session_state.report_chain.append(block)
+    save_blockchain_backend()
+    return True
+
+
+if "report_chain" not in st.session_state or "report_ledger" not in st.session_state:
+    loaded_chain, loaded_ledger = load_blockchain_backend()
+    st.session_state.report_chain = loaded_chain
+    st.session_state.report_ledger = loaded_ledger
 #Home Page -------------------------------------------------------------------------------------------------------------
 if select_one == "🏡Home":
     com.iframe("https://embed.lottiefiles.com/animation/9101", height=100, scrolling=True)
@@ -229,8 +412,18 @@ if select_one == "📝Report Incident":
                 "description": description,
                 "risk": risk,
                 "platform": platform,
+                "status": "Submitted",
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
+
+            append_report_block(
+                tracking_id=tracking_id,
+                incident_type=contant,
+                risk=risk,
+                platform=platform,
+                url_value=url_,
+                description_value=description
+            )
 
             fernet = Fernet(st.session_state.fernet_key)
             encrypted_description = fernet.encrypt(description.encode()).decode()
@@ -266,59 +459,176 @@ if select_one == "📌Track Report":
             st.error("Tracking ID should not contain spaces. Please enter a valid tracking ID without spaces.")
             st.stop()
         else:
-            matched_report = None
-            if st.session_state.last_report and st.session_state.last_report.get("tracking_id") == tracking_id_input:
-                matched_report = st.session_state.last_report
+            matched_ledger = None
+            for row in reversed(st.session_state.report_ledger):
+                if row.get("tracking_id") == tracking_id_input:
+                    matched_ledger = row
+                    break
 
-            if matched_report:
+            matching_blocks = [
+                b for b in st.session_state.report_chain
+                if b.get("payload", {}).get("tracking_id") == tracking_id_input
+            ]
+            latest_block = matching_blocks[-1] if matching_blocks else None
+
+            if matched_ledger:
                 st.success("Report found.")
                 with st.spinner("Loading report details..."):
                     time.sleep(1)
-                    st.write("Tracking ID : " + f"**{matched_report.get("tracking_id", "")}**")
+                    st.write("Tracking ID : " + f"**{matched_ledger.get('tracking_id', '')}**")
                     col1,col2=st.columns(2)
                     with col1:
-                        st.write("Incident Type : " + f"**{matched_report.get("incident_type", "")}**")  
-                        st.write("Status : " + f"**Under Review**")
-                        st.write("Risk Assessment : " + f"**{matched_report.get("risk", "")}**")
+                        st.write("Incident Type : " + f"**{matched_ledger.get('incident_type', 'N/A')}**")
+                        st.write("Status : " + f"**{matched_ledger.get('status', 'Submitted')}**")
+                        st.write("Risk Assessment : " + f"**{matched_ledger.get('severity', 'N/A')}**")
                     with col2:
-                        st.write("Platform : " + f"**{matched_report.get("platform", "")}**")
-                        st.write("Last Updated : " + f"**{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**")
-                        st.write("URL : " + f"**{matched_report.get("url", "")}**")
-                    st.write("Description : " + f"**{matched_report.get("description", "")}**")
+                        st.write("Platform : " + f"**{matched_ledger.get('platform', 'N/A')}**")
+                        st.write("Last Updated : " + f"**{matched_ledger.get('updated_at', matched_ledger.get('timestamp', 'N/A'))}**")
+                        st.write("Block Index : " + f"**{matched_ledger.get('block_index', 'N/A')}**")
+
+                    if st.session_state.last_report and st.session_state.last_report.get("tracking_id") == tracking_id_input:
+                        st.write("URL : " + f"**{st.session_state.last_report.get('url', '')}**")
+                        st.write("Description : " + f"**{st.session_state.last_report.get('description', '')}**")
+                    elif latest_block:
+                        st.info("For privacy, raw URL and description are not shown here. Blockchain stores their hashes.")
+                        st.write("URL Hash:", latest_block.get("payload", {}).get("url_hash", "N/A"))
+                        st.write("Description Hash:", latest_block.get("payload", {}).get("description_hash", "N/A"))
                 with st.expander("Report Updates"):
                     st.write("Updates:")
-                    st.write("- Your report is currently being reviewed by our team.")
-                    st.write("- We will contact you if we need any additional information.")
+                    for event_block in reversed(matching_blocks):
+                        payload = event_block.get("payload", {})
+                        if payload.get("event") == "STATUS_UPDATED":
+                            st.write(f"- {payload.get('timestamp')}: Status changed to {payload.get('status')} by {payload.get('actor', 'System')}")
                     st.write("- You can check back here for updates on the status of your report.")
                     st.write("Thank you for your patience and for taking the time to report this incident. Your contribution is valuable in helping us combat child sexual offenses and protect children from harm.")
             else:
-                st.info("Tracking ID not found in this session yet. Submit a report first or enter the latest session tracking ID.")
+                st.info("Tracking ID not found in blockchain records.")
 
 #Blockchain Explorer
 
-# if select_one == "🔗Blockchain Explorer":
-#     com.iframe("https://embed.lottiefiles.com/animation/9101", height=100, scrolling=True)
-#     st.title("Blockchain Explorer")
-#     st.write("Explore the blockchain to view all submitted reports, their statuses, and related information. You can also search for specific reports using tracking IDs or filter reports based on incident types and severity levels.")
-#     st.divider()
-#     st.subheader("Search Reports")
-#     st.button("Refresh Report List")
-#     st.text_input("Search by Tracking ID", placeholder="Enter Tracking ID to search for a specific report", label_visibility="collapsed")
-#     st.selectbox("Filter by Incident Type", options=["All", "Child Sexual Abuse", "Child Exploitation", "Human Trafficking", "Harassment", "Cyberbullying", "Revenge Pornography"], key="filter_incident_type", help="Filter reports based on the type of incident.")
-#     st.selectbox("Filter by Severity Level", options=["All", "Low", "Medium", "High", "Critical"], key="filter_severity_level", help="Filter reports based on the severity level.")
-#     st.subheader("Report List")
-#     st.write("Here you can view all the reports that have been submitted to the blockchain. You can click on each report to view more details and the status of the investigation.")
-#     st.dataframe({
-#         "Tracking ID": ["PR-ABC123SR-DEF456", "PR-GHI789SR-JKL012", "PR-MNO345SR-PQR678"],
-#         "Incident Type": ["Child Sexual Abuse", "Human Trafficking", "Cyberbullying"],
-#         "Severity Level": ["High", "Critical", "Medium"],
-#         "Status": ["Under Review", "Investigation Ongoing", "Resolved"],
-#         "Last Updated": ["2024-06-01 12:00:00", "2024-06-02 15:30:00", "2024-06-03 10:45:00"],
-#         "Platform": ["Facebook", "Website", "Instagram"],
-#         "URL": ["https://example.com/incident1", "https://example.com/incident2", "https://example.com/incident3"]
-#         })
-    
-#     st.write("Note: The above data is for demonstration purposes only and does not represent real reports. In a real implementation, this data would be dynamically fetched from the blockchain and updated in real-time as new reports are submitted and processed.")
+if select_one == "🔗Blockchain Explorer":
+    com.iframe("https://embed.lottiefiles.com/animation/9101", height=100, scrolling=True)
+    st.title("Blockchain Explorer")
+    st.write("Advanced blockchain explorer with integrity checks, searchable transactions, and status actions.")
+    st.divider()
+
+    chain_ok, chain_message = verify_chain_integrity(st.session_state.report_chain)
+
+    total_blocks = len(st.session_state.report_chain)
+    total_reports = len(st.session_state.report_ledger)
+    high_priority = sum(1 for r in st.session_state.report_ledger if r.get("severity") in ["High", "Critical"])
+    pending_reports = sum(1 for r in st.session_state.report_ledger if r.get("status") in ["Submitted", "Under Review", "Investigating", "Escalated"])
+
+    c1, c2, c3, c4, c5 = st.columns(5)
+    with c1:
+        st.metric("Total Blocks", total_blocks)
+    with c2:
+        st.metric("Total Reports", total_reports)
+    with c3:
+        st.metric("High/Critical", high_priority)
+    with c4:
+        st.metric("Open Cases", pending_reports)
+    with c5:
+        st.metric("Chain Status", "Valid" if chain_ok else "Tampered")
+
+    if chain_ok:
+        st.success(chain_message)
+    else:
+        st.error(chain_message)
+
+    st.caption(f"Backend storage file: {BACKEND_FILE}")
+
+    if not total_reports:
+        st.info("No reports are in the blockchain yet. Submit a report first from the Report Incident page.")
+    else:
+        tab1, tab2, tab3 = st.tabs(["Report Ledger", "Chain Blocks", "Status Actions"])
+
+        with tab1:
+            st.subheader("Search and Filter")
+            search_tracking = st.text_input("Search by Tracking ID", placeholder="PR-...", key="explorer_tracking_search")
+            incident_options = ["All"] + sorted(set(r["incident_type"] for r in st.session_state.report_ledger))
+            severity_options = ["All", "Low", "Medium", "High", "Critical"]
+            status_options = ["All", "Submitted", "Under Review", "Investigating", "Escalated", "Resolved", "Rejected"]
+
+            fc1, fc2, fc3 = st.columns(3)
+            with fc1:
+                selected_incident = st.selectbox("Incident Type", incident_options, key="explorer_incident_filter")
+            with fc2:
+                selected_severity = st.selectbox("Severity", severity_options, key="explorer_severity_filter")
+            with fc3:
+                selected_status = st.selectbox("Status", status_options, key="explorer_status_filter")
+
+            filtered_rows = []
+            for row in st.session_state.report_ledger:
+                if search_tracking and search_tracking.strip().lower() not in row["tracking_id"].lower():
+                    continue
+                if selected_incident != "All" and row["incident_type"] != selected_incident:
+                    continue
+                if selected_severity != "All" and row["severity"] != selected_severity:
+                    continue
+                if selected_status != "All" and row.get("status", "Submitted") != selected_status:
+                    continue
+                filtered_rows.append(row)
+
+            st.subheader("Ledger View")
+            if filtered_rows:
+                st.dataframe(pd.DataFrame(filtered_rows), use_container_width=True)
+                st.download_button(
+                    "Download Filtered Ledger (JSON)",
+                    data=json.dumps(filtered_rows, indent=2),
+                    file_name="filtered_ledger.json",
+                    mime="application/json"
+                )
+            else:
+                st.warning("No reports matched the current filters.")
+
+        with tab2:
+            st.subheader("Block Browser")
+            block_index = st.slider("Select Block Index", min_value=0, max_value=len(st.session_state.report_chain) - 1, value=len(st.session_state.report_chain) - 1)
+            chosen_block = st.session_state.report_chain[block_index]
+
+            st.write("Block Index:", chosen_block["index"])
+            st.write("Timestamp:", chosen_block["timestamp"])
+            st.write("Previous Hash:", chosen_block["previous_hash"])
+            st.write("Current Hash:", chosen_block["hash"])
+            st.json(chosen_block["payload"])
+
+            st.subheader("Recent Chain Events")
+            event_rows = []
+            for block in reversed(st.session_state.report_chain[-20:]):
+                payload = block.get("payload", {})
+                event_rows.append({
+                    "block_index": block.get("index"),
+                    "timestamp": block.get("timestamp"),
+                    "event": payload.get("event", "REPORT_SUBMITTED"),
+                    "tracking_id": payload.get("tracking_id", "-")
+                })
+            st.dataframe(pd.DataFrame(event_rows), use_container_width=True)
+
+        with tab3:
+            st.subheader("Write Status Update Transaction")
+            tracking_ids = [r["tracking_id"] for r in st.session_state.report_ledger]
+            selected_tracking = st.selectbox("Select Tracking ID", tracking_ids, key="explorer_action_tracking")
+            selected_new_status = st.selectbox(
+                "New Status",
+                ["Submitted", "Under Review", "Investigating", "Escalated", "Resolved", "Rejected"],
+                key="explorer_action_status"
+            )
+            actor = st.text_input("Actor", value="Explorer Admin", key="explorer_action_actor")
+
+            if st.button("Commit Status Transaction", type="primary"):
+                updated = append_status_update_block(selected_tracking, selected_new_status, actor.strip() if actor.strip() else "System")
+                if updated:
+                    st.success("Status update was written as a new blockchain block.")
+                else:
+                    st.error("Could not update status for the selected tracking ID.")
+
+    with st.expander("How This Works (Easy Explanation)"):
+        st.write("1. A new report becomes a new block.")
+        st.write("2. A block hash is generated from block content (index, timestamp, payload, previous hash).")
+        st.write("3. Each block points to the previous block hash, so any tampering breaks integrity checks.")
+        st.write("4. Status changes are also transactions and create new blocks.")
+        st.write("5. Data is persisted in a local JSON backend for continuity across app restarts.")
 
 # AI Analyzer with API Key
 
@@ -1262,6 +1572,12 @@ elif select_one == "🔐Authority Dashboard":
                     "previous_hash": prev["hash"],
                     "hash": chain_hash
                 })
+
+                append_status_update_block(
+                    tracking_id=selected_case["tracking_id"],
+                    new_status=new_status,
+                    actor="Authority Dashboard"
+                )
 
                 st.success("Case updated and written to immutable authority chain.")
 
