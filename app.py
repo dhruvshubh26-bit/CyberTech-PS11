@@ -239,7 +239,7 @@ if "report_chain" not in st.session_state or "report_ledger" not in st.session_s
     st.session_state.report_ledger = loaded_ledger
 #Home Page -------------------------------------------------------------------------------------------------------------
 if select_one == "🏡Home":
-    com.iframe("https://embed.lottiefiles.com/animation/9101", height=100, scrolling=True)
+    com.iframe("https://embed.lottiefiles.com/animation/490", height=100, scrolling=True)
     st.title("Welcome to the POCSO Reporting System")
     
     st.subheader("Empowering Communities to Combat Child Sexual Offenses")
@@ -279,7 +279,7 @@ if select_one == "🏡Home":
 
 # Report Incident Page -------------------------------------------------------------------------------------------------------------
 if select_one == "📝Report Incident":
-    com.iframe("https://embed.lottiefiles.com/animation/9101", height=100, scrolling=True)
+    com.iframe("https://embed.lottiefiles.com/animation/1114", height=100, scrolling=True)
     st.title("Report an Incident")
     st.write("Please fill out the form below to report an incident related to child sexual offenses. Your report will be treated with the utmost confidentiality and will be securely stored on the blockchain.")
 
@@ -442,6 +442,7 @@ if select_one == "📝Report Incident":
 #Track Report Page -------------------------------------------------------------------------------------------------------------
 
 if select_one == "📌Track Report":
+    com.iframe("https://embed.lottiefiles.com/animation/580", height=100, scrolling=True)
     st.title("Track Your Report")
     st.write("Enter your tracking ID below to check the status of your submitted report. You can also view the details of your report and any updates related to it.")
 
@@ -507,7 +508,8 @@ if select_one == "📌Track Report":
 #Blockchain Explorer
 
 if select_one == "🔗Blockchain Explorer":
-    com.iframe("https://embed.lottiefiles.com/animation/9101", height=100, scrolling=True)
+    
+    com.iframe("https://embed.lottiefiles.com/animation/1860", height=100, scrolling=True)
     st.title("Blockchain Explorer")
     st.write("Advanced blockchain explorer with integrity checks, searchable transactions, and status actions.")
     st.divider()
@@ -632,9 +634,8 @@ if select_one == "🔗Blockchain Explorer":
 
 # AI Analyzer with API Key
 
-
-
 # if select_one == "🛡️AI Analyzer":
+# com.iframe("https://embed.lottiefiles.com/animation/9060", height=100, scrolling=True)
 #     st.title("🛡️ AI Content Analyzer")
 #     st.write("Paste any suspicious text, description, or URL content below. AI will analyze it and tell you if it contains harmful or illegal content.")
 #     st.divider()
@@ -836,6 +837,7 @@ if select_one == "🔗Blockchain Explorer":
 
 #AI analyzer without API Key-------------------------------------------------------------------------------------------------------
 elif select_one == "🛡️AI Analyzer":
+    com.iframe("https://embed.lottiefiles.com/animation/9060", height=100, scrolling=True)
     st.title("🛡️ AI Content Analyzer")
 
     st.subheader("Paste any suspicious text, description, or URL content below. AI will analyze it and tell you if it contains harmful or illegal content.")
@@ -886,6 +888,7 @@ elif select_one == "🛡️AI Analyzer":
     
 #URL Checker Page -------------------------------------------------------------------------------------------------------------
 elif select_one == "📥URL Checker":
+    com.iframe("https://embed.lottiefiles.com/animation/1869", height=100, scrolling=True)
     st.title("Secure URL Checker")
     st.write("Checks URL structure, DNS resolution, WHOIS age, TLS, redirects, and suspicious patterns without reading page content.")
     st.divider()
@@ -1165,6 +1168,7 @@ elif select_one == "📥URL Checker":
 
 #Webpage Scanner Page -------------------------------------------------------------------------------------------------------------
 elif select_one == "🌐Webpage Analyzer":
+    com.iframe("https://embed.lottiefiles.com/animation/1607", height=100, scrolling=True)
     st.title("Webpage Content Scanner")
     st.write("Enter a URL to scan webpage security and content risk signals with weighted scoring.")
     st.divider()
@@ -1379,6 +1383,7 @@ elif select_one == "🌐Webpage Analyzer":
 
 # Authority
 elif select_one == "🔐Authority Dashboard":
+    com.iframe("https://embed.lottiefiles.com/animation/710", height=100, scrolling=True)
     st.title("Authority Dashboard")
     st.write("Manage cases, verify report integrity, escalate high-risk incidents, and keep tamper-evident audit trails.")
     st.divider()
@@ -1665,6 +1670,7 @@ elif select_one == "🔐Authority Dashboard":
 
 #Privacy
 elif select_one == "🙈Privacy":
+    com.iframe("https://embed.lottiefiles.com/animation/500", height=100, scrolling=True)  
     st.title("Privacy Information")
     st.write("Learn about data handling, user rights, and our commitment to protecting your privacy.")
     st.divider()
@@ -1698,6 +1704,7 @@ elif select_one == "🙈Privacy":
 
 #About
 elif select_one =="🧑‍💻About":
+    com.iframe("https://embed.lottiefiles.com/animation/1000", height=100, scrolling=True)
     st.title("About This Project ")
     st.write("This space is built with care for people who need safety, trust, and support 🤝")
     st.divider()
