@@ -29,7 +29,7 @@ st.set_page_config(page_title="🧑‍💻POCSO Reporting", layout="wide", initi
 st.sidebar.title("POCSO Reporting System")
 st.sidebar.subheader("Blockchain-based POCSO Reporting")
 # st.sidebar.divider()
-select_one=st.sidebar.selectbox("Go To", options=["🏡Home","📝Report Incident","📌Track Report","🔗Blockchain Explorer","🛡️AI Analyzer","📥URL Checker","🌐Webpage Analyzer","🔐Authority Dashboard","📊Analytics","⚠️Audit Logs","🙈Privacy","🧑‍💻About"], key="page_selection")
+select_one=st.sidebar.selectbox("Go To", options=["🏡Home","📝Report Incident","📌Track Report","🔗Blockchain Explorer","🛡️AI Analyzer","📥URL Checker","🌐Webpage Analyzer","🔐Authority Dashboard","🙈Privacy","🧑‍💻About"], key="page_selection")
 
 if "last_report" not in st.session_state:
     st.session_state.last_report = None
@@ -285,14 +285,14 @@ if select_one == "📌Track Report":
                         st.write("Last Updated : " + f"**{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**")
                         st.write("URL : " + f"**{matched_report.get("url", "")}**")
                     st.write("Description : " + f"**{matched_report.get("description", "")}**")
+                with st.expander("Report Updates"):
+                    st.write("Updates:")
+                    st.write("- Your report is currently being reviewed by our team.")
+                    st.write("- We will contact you if we need any additional information.")
+                    st.write("- You can check back here for updates on the status of your report.")
+                    st.write("Thank you for your patience and for taking the time to report this incident. Your contribution is valuable in helping us combat child sexual offenses and protect children from harm.")
             else:
                 st.info("Tracking ID not found in this session yet. Submit a report first or enter the latest session tracking ID.")
-            with st.expander("Report Updates"):
-                st.write("Updates:")
-                st.write("- Your report is currently being reviewed by our team.")
-                st.write("- We will contact you if we need any additional information.")
-                st.write("- You can check back here for updates on the status of your report.")
-                st.write("Thank you for your patience and for taking the time to report this incident. Your contribution is valuable in helping us combat child sexual offenses and protect children from harm.")
 
 #Blockchain Explorer
 
@@ -1068,3 +1068,341 @@ elif select_one == "🌐Webpage Analyzer":
             st.error("RISK LEVEL: HIGH")
 
 # Authority
+elif select_one == "🔐Authority Dashboard":
+    st.title("Authority Dashboard")
+    st.write("Manage cases, verify report integrity, escalate high-risk incidents, and keep tamper-evident audit trails.")
+    st.divider()
+
+    if "authority_cases" not in st.session_state:
+        st.session_state.authority_cases = []
+
+    if "authority_audit_log" not in st.session_state:
+        st.session_state.authority_audit_log = []
+
+    if "authority_chain" not in st.session_state:
+        st.session_state.authority_chain = []
+        genesis_payload = {
+            "event": "GENESIS",
+            "case_id": "GENESIS",
+            "status": "Initialized",
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        genesis_hash = hashlib.sha256(json.dumps(genesis_payload, sort_keys=True).encode()).hexdigest()
+        st.session_state.authority_chain.append({
+            "index": 0,
+            "timestamp": genesis_payload["timestamp"],
+            "payload": genesis_payload,
+            "previous_hash": "0",
+            "hash": genesis_hash
+        })
+
+    top1, top2, top3, top4 = st.columns(4)
+    with top1:
+        st.metric("Total Cases", len(st.session_state.authority_cases))
+    with top2:
+        high_count = sum(1 for c in st.session_state.authority_cases if c.get("priority") in ["High", "Critical"])
+        st.metric("High/Critical", high_count)
+    with top3:
+        open_count = sum(1 for c in st.session_state.authority_cases if c.get("status") in ["Submitted", "Under Review", "Investigating", "Escalated"])
+        st.metric("Open Cases", open_count)
+    with top4:
+        st.metric("Audit Events", len(st.session_state.authority_audit_log))
+
+    st.divider()
+    st.subheader("Case Intake")
+
+    if st.button("Import Latest Citizen Report"):
+        if not st.session_state.last_report:
+            st.info("No citizen report is available in this session.")
+        else:
+            last_report = st.session_state.last_report
+            case_id = "CASE-" + hashlib.sha256((last_report.get("tracking_id", "") + str(time.time())).encode()).hexdigest()[:10].upper()
+
+            url_value = str(last_report.get("url", "")).lower()
+            description_value = str(last_report.get("description", "")).lower()
+            combined_text = url_value + " " + description_value
+
+            ai_flags = []
+            if any(t in combined_text for t in ["child", "minor", "csam", "groom", "traffick", "rape", "blackmail"]):
+                ai_flags.append("Child exploitation indicators detected")
+            if any(t in combined_text for t in ["porn", "xxx", "nude", "adult", "xhamster", "xvideos", "pornhub"]):
+                ai_flags.append("Explicit content indicators detected")
+            if any(t in combined_text for t in ["telegram", "dark", "onion", "crypto", "wallet"]):
+                ai_flags.append("Suspicious platform/payment indicators detected")
+
+            if len(ai_flags) >= 2:
+                priority = "Critical"
+            elif len(ai_flags) == 1 or last_report.get("risk") in ["High", "Critical"]:
+                priority = "High"
+            elif last_report.get("risk") == "Medium":
+                priority = "Medium"
+            else:
+                priority = "Low"
+
+            source_url = last_report.get("url", "")
+            domain_value = ""
+            try:
+                parsed = urlparse(source_url)
+                domain_value = parsed.netloc.lower()
+            except Exception:
+                domain_value = ""
+
+            repeated_count = sum(1 for c in st.session_state.authority_cases if domain_value and c.get("domain") == domain_value)
+            if repeated_count >= 2:
+                priority = "Critical"
+                ai_flags.append("Repeated offender pattern for same domain")
+
+            case_item = {
+                "case_id": case_id,
+                "tracking_id": last_report.get("tracking_id", ""),
+                "incident_type": last_report.get("incident_type", ""),
+                "platform": last_report.get("platform", ""),
+                "domain": domain_value,
+                "url": source_url,
+                "description": last_report.get("description", ""),
+                "citizen_risk": last_report.get("risk", "Low"),
+                "priority": priority,
+                "status": "Submitted",
+                "escalation_level": "None",
+                "assigned_to": "Unassigned",
+                "ai_flags": ai_flags,
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            st.session_state.authority_cases.append(case_item)
+
+            audit_message = {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "case_id": case_id,
+                "event": "Case Imported",
+                "details": f"Priority={priority}; Flags={len(ai_flags)}"
+            }
+            st.session_state.authority_audit_log.append(audit_message)
+
+            prev = st.session_state.authority_chain[-1]
+            chain_payload = {
+                "event": "CASE_IMPORTED",
+                "case_id": case_id,
+                "priority": priority,
+                "status": "Submitted",
+                "timestamp": audit_message["timestamp"]
+            }
+            chain_hash = hashlib.sha256(json.dumps(chain_payload, sort_keys=True).encode()).hexdigest()
+            st.session_state.authority_chain.append({
+                "index": len(st.session_state.authority_chain),
+                "timestamp": chain_payload["timestamp"],
+                "payload": chain_payload,
+                "previous_hash": prev["hash"],
+                "hash": chain_hash
+            })
+
+            st.success(f"Case {case_id} created and logged on authority chain.")
+
+    st.divider()
+    st.subheader("Case Management")
+
+    if st.session_state.authority_cases:
+        selected_case_id = st.selectbox(
+            "Select Case",
+            options=[c["case_id"] for c in st.session_state.authority_cases],
+            key="authority_selected_case"
+        )
+
+        selected_case = None
+        for item in st.session_state.authority_cases:
+            if item["case_id"] == selected_case_id:
+                selected_case = item
+                break
+
+        if selected_case:
+            col_a, col_b = st.columns(2)
+            with col_a:
+                new_status = st.selectbox("Update Status", ["Submitted", "Under Review", "Investigating", "Escalated", "Resolved", "Rejected"], index=["Submitted", "Under Review", "Investigating", "Escalated", "Resolved", "Rejected"].index(selected_case["status"]))
+                new_priority = st.selectbox("Priority", ["Low", "Medium", "High", "Critical"], index=["Low", "Medium", "High", "Critical"].index(selected_case["priority"]))
+            with col_b:
+                new_escalation = st.selectbox("Escalation Level", ["None", "Level 1", "Level 2", "Level 3", "Emergency"], index=["None", "Level 1", "Level 2", "Level 3", "Emergency"].index(selected_case["escalation_level"]))
+                new_assignee = st.text_input("Assigned Officer/Unit", value=selected_case["assigned_to"]) 
+
+            note = st.text_area("Authority Note", placeholder="Add verification notes, legal action, or escalation reasons")
+
+            if st.button("Save Case Update", type="primary"):
+                old_status = selected_case["status"]
+                selected_case["status"] = new_status
+                selected_case["priority"] = new_priority
+                selected_case["escalation_level"] = new_escalation
+                selected_case["assigned_to"] = new_assignee.strip() if new_assignee.strip() else "Unassigned"
+                selected_case["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                audit_detail = f"Status {old_status} -> {new_status}; Priority={new_priority}; Escalation={new_escalation}"
+                if note.strip():
+                    audit_detail += f"; Note={note.strip()}"
+
+                audit_message = {
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "case_id": selected_case["case_id"],
+                    "event": "Case Updated",
+                    "details": audit_detail
+                }
+                st.session_state.authority_audit_log.append(audit_message)
+
+                prev = st.session_state.authority_chain[-1]
+                chain_payload = {
+                    "event": "CASE_UPDATED",
+                    "case_id": selected_case["case_id"],
+                    "status": new_status,
+                    "priority": new_priority,
+                    "escalation": new_escalation,
+                    "timestamp": audit_message["timestamp"]
+                }
+                chain_hash = hashlib.sha256(json.dumps(chain_payload, sort_keys=True).encode()).hexdigest()
+                st.session_state.authority_chain.append({
+                    "index": len(st.session_state.authority_chain),
+                    "timestamp": chain_payload["timestamp"],
+                    "payload": chain_payload,
+                    "previous_hash": prev["hash"],
+                    "hash": chain_hash
+                })
+
+                st.success("Case updated and written to immutable authority chain.")
+
+            st.write("Case Snapshot")
+            st.json(selected_case)
+            if selected_case.get("ai_flags"):
+                st.write("AI/ML Flags")
+                for flag in selected_case["ai_flags"]:
+                    st.write(f"- {flag}")
+    else:
+        st.info("No cases yet. Import a citizen report to begin case management.")
+
+    st.divider()
+    st.subheader("Case Register")
+    if st.session_state.authority_cases:
+        case_rows = []
+        for c in st.session_state.authority_cases:
+            case_rows.append({
+                "case_id": c["case_id"],
+                "tracking_id": c["tracking_id"],
+                "incident_type": c["incident_type"],
+                "domain": c["domain"],
+                "status": c["status"],
+                "priority": c["priority"],
+                "escalation": c["escalation_level"],
+                "assigned_to": c["assigned_to"],
+                "updated_at": c["updated_at"]
+            })
+        st.dataframe(pd.DataFrame(case_rows), use_container_width=True)
+
+        domain_counts = Counter([c["domain"] for c in st.session_state.authority_cases if c.get("domain")])
+        repeated_domains = [d for d, ct in domain_counts.items() if ct >= 2]
+        if repeated_domains:
+            st.warning("Repeated offender domains detected:")
+            for d in repeated_domains:
+                st.write(f"- {d} ({domain_counts[d]} reports)")
+    else:
+        st.info("Case register is empty.")
+
+    st.divider()
+    st.subheader("Immutable Audit Trail")
+    if st.session_state.authority_audit_log:
+        audit_rows = []
+        for event in st.session_state.authority_audit_log:
+            audit_rows.append({
+                "timestamp": event["timestamp"],
+                "case_id": event["case_id"],
+                "event": event["event"],
+                "details": event["details"]
+            })
+        st.dataframe(pd.DataFrame(audit_rows), use_container_width=True)
+    else:
+        st.info("No audit events yet.")
+
+    with st.expander("Authority Chain Blocks"):
+        for block in reversed(st.session_state.authority_chain):
+            st.write(f"Block #{block['index']} | {block['timestamp']}")
+            st.write(f"Previous Hash: {block['previous_hash']}")
+            st.write(f"Hash: {block['hash']}")
+            st.json(block["payload"])
+            st.divider()
+
+    st.divider()
+    st.subheader("India Priority Reporting")
+    st.write("Use these channels first for incidents affecting users in India.")
+    st.markdown("- [National Cyber Crime Reporting Portal](https://cybercrime.gov.in/)")
+    st.markdown("- [Cyber Crime Helpline: 1930](https://www.cybercrime.gov.in/Webform/Crime_NodalGrivanceList.aspx)")
+    st.markdown("- [NCPCR (National Commission for Protection of Child Rights)](https://ncpcr.gov.in/)")
+    st.markdown("- [Emergency Response Support System: 112](https://112.gov.in/)")
+
+    st.info("For POCSO-related evidence, preserve URL, timestamp, screenshots, and report ID before escalation.")
+
+    st.subheader("India Legal Context")
+    st.write("Relevant laws for authority action in India:")
+    st.write("- POCSO Act (child sexual offences)")
+    st.write("- IT Act sections for cyber offences and unlawful content")
+    st.write("- IPC/BNS sections for exploitation, harassment, and trafficking")
+
+    st.divider()
+    st.subheader("Global Emergency Reporting Links")
+    st.markdown("- [FBI Internet Crime Complaint Center (IC3)](https://www.ic3.gov/)")
+    st.markdown("- [NCMEC CyberTipline](https://www.missingkids.org/gethelpnow/cybertipline)")
+    st.markdown("- [Europol Cybercrime Reporting](https://www.europol.europa.eu/report-a-crime/report-cybercrime-online)")
+    st.markdown("- [Interpol](https://www.interpol.int/)")
+
+#Privacy
+elif select_one == "🙈Privacy":
+    st.title("Privacy Information")
+    st.write("Learn about data handling, user rights, and our commitment to protecting your privacy.")
+    st.divider()
+
+    st.subheader("🛡️Our Privacy Promise")
+    st.success("We do not share your personal information without your permission, except where legally required for child safety and law enforcement action.")
+
+    st.subheader("What We Collect")
+    st.write("- Report details you submit: URL, incident type, description, risk level, and optional evidence.")
+    st.write("- Optional contact details if you provide them voluntarily.")
+    st.write("- System metadata such as timestamps and report/case IDs for tracking and audit purposes.")
+
+    st.subheader("What We Do Not Do")
+    st.write("- We do not sell your data.")
+    st.write("- We do not publish your identity publicly.")
+    st.write("- We do not share personal details with third parties without your consent, unless required by law for urgent protection and investigation.")
+
+    st.subheader("How Your Data Is Protected")
+    st.write("- Sensitive report fields are encrypted before handling in the app workflow.")
+    st.write("- Blockchain-style logging is used for tamper-evident traceability of case actions.")
+    st.write("- Access is role-based for authority workflows, and all updates are audit logged.")
+
+    st.subheader("User Rights")
+    st.write("- Right to know what information was submitted.")
+    st.write("- Right to request correction of incorrect information.")
+    st.write("- Right to request deletion where legally permissible.")
+
+    with st.expander("Important Note"):
+        st.write("This platform is designed to maximize privacy while enabling lawful intervention against harmful content.")
+        st.write("In immediate danger situations, please contact emergency services first.")
+
+#About
+elif select_one =="🧑‍💻About":
+    st.title("About This Project ")
+    st.write("This space is built with care for people who need safety, trust, and support 🤝")
+    st.divider()
+
+    st.subheader("From Our Heart ❤️")
+    st.write("- Every report represents a real person, a real fear, and a real hope for help ")
+    st.write("- We believe no one should stay silent because they are afraid of being judged ")
+    st.write("- This platform exists to make people feel heard, protected, and respected 🛡️")
+    st.write("- We stand for dignity, child safety, and a kinder digital world 🌍")
+
+    st.subheader("Made With Purpose ✨")
+    st.info("Made by Dhruv Sukhadiya 💫")
+    st.success("Built during Craftathon 2026 🏆")
+
+    st.subheader("Connect With Us 🌐")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.link_button("GitHub Profile", "https://github.com/dhruvshubh26-bit")
+    with col2:
+        st.link_button("LinkedIn Profile", "https://www.linkedin.com/in/dhruv-sukhadiya-348299368?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app")
+
+    with st.expander("A Small Promise 🤍"):
+        st.write("If your voice reaches us, we will treat it with care 🫶")
+        st.write("This is more than a project. It is a commitment to protect and support 🙏")
