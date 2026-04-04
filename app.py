@@ -864,21 +864,20 @@ elif select_one == "🛡️AI Analyzer":
             if keyword in content_to_analyze.lower():
                 count+=1
 
-        if count > 0:
-            st.error(f"⚠️ Potential Harmful Content Detected ({count} harmful keywords found)")
-            
-            st.write(f"Risk Score: {count}")
-            if count <= 5:
-                st.write("RISK LEVEL: LOW")
-                st.warning("⚠️ Some Harmful Content Detected")
-            if count > 5:
-                st.write("RISK LEVEL: HIGH")
-                st.warning("🚨 Abusive Content Detected")
-            elif count > 10:
-                st.write("RISK LEVEL: CRITICAL")
-                st.warning("🚨 Highly Abusive Content Detected")
-        else:
+        
+        if count == 0:
             st.success("✅ No Harmful Content Detected")
+            st.write(f"Risk Score: {count}/100")
+        else:
+            st.error(f"⚠️ Harmful Content Detected ({count} keywords)")
+            st.write(f"Risk Score: {count}/100")
+                
+            if count <= 5:
+                st.warning("🔴 RISK LEVEL: LOW")
+            elif count <= 10:
+                st.error("🟡 RISK LEVEL: HIGH") 
+            else:
+                st.error("🔴 RISK LEVEL: CRITICAL")
     
 #URL Checker Page -------------------------------------------------------------------------------------------------------------
 elif select_one == "📥URL Checker":
