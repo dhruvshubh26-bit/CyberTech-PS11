@@ -291,14 +291,14 @@ if select_one == "📝Report Incident":
             st.success("Your personal information has been saved securely.")
             st.write("Your personal information will be encrypted and stored securely on the blockchain, ensuring that it remains confidential and protected from unauthorized access.")
     st.subheader("Type of Content")
-    contant=st.selectbox("", options=["Child Sexual Abuse","Child Exploitation","Human Trafficking","Harassment","Cyberbullying","Revenge Pornography","Online Fraud","Other Illegal Activities"], key="incident_type", help="Select the type of incident you are reporting.", index=None, disabled=False,label_visibility="collapsed")
+    content=st.selectbox("", options=["Child Sexual Abuse","Child Exploitation","Human Trafficking","Harassment","Cyberbullying","Revenge Pornography","Online Fraud","Other Illegal Activities"], key="incident_type", help="Select the type of incident you are reporting.", index=None, disabled=False,label_visibility="collapsed")
 
     st.subheader("Enter URL of the Content")
     url_ = st.text_input("", placeholder="https://example.com/incident", help="Enter the URL where the incident occurred. This will help us investigate and take appropriate action.",label_visibility="collapsed", key="url_input")
             
 
     st.subheader("Description of the Incident")
-    description = st.text_area(label="", placeholder=f"Provide details about the {contant}", help="Provide a detailed description of the incident to help us understand the context and severity.",label_visibility="collapsed", key="description_input")
+    description = st.text_area(label="", placeholder=f"Provide details about the {content}", help="Provide a detailed description of the incident to help us understand the context and severity.",label_visibility="collapsed", key="description_input")
 
     st.subheader("Severity Level")
     risk=st.select_slider("", options=['Low', 'Medium', 'High','Critical'], help="Rate the severity of the incident on a scale of 1 to 10, with 10 being the most severe.",label_visibility="collapsed", key="risk_input")
@@ -376,7 +376,7 @@ if select_one == "📝Report Incident":
         st.error("An error occurred while validating the URL. Please enter a valid URL.")
         st.stop()
 
-    if check and contant and url_ and description and risk and platform and platform.strip():
+    if check and content and url_ and description and risk and platform and platform.strip():
         submit_report = st.button("Submit Report")
         if submit_report:
             st.success("Your report has been submitted successfully.")
@@ -401,7 +401,7 @@ if select_one == "📝Report Incident":
 
             st.session_state.last_report = {
                 "tracking_id": tracking_id,
-                "incident_type": contant,
+                "incident_type": content,
                 "url": url_,
                 "description": description,
                 "risk": risk,
@@ -412,7 +412,7 @@ if select_one == "📝Report Incident":
 
             append_report_block(
                 tracking_id=tracking_id,
-                incident_type=contant,
+                incident_type=content ,
                 risk=risk,
                 platform=platform,
                 url_value=url_,
